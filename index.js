@@ -13,7 +13,6 @@ const headers = {
 };
 
 const server = http.createServer((req, res) => {
-  // Your existing code for fetching and processing data here
   const currentDateTime = DateTime.local();
   const daysUntilWednesday = (currentDateTime.weekday - 2 + 7) % 7;
   const adjustedDate = currentDateTime.minus({ days: daysUntilWednesday });
@@ -33,7 +32,7 @@ const server = http.createServer((req, res) => {
       const responseData = response.data.data || [];
       const userDetailsList = [];
 
-      const getUserDetails = async (userId) => {
+      const getUserDetails = async (userId, activity, created, course) => {
         try {
           const userResponse = await axios.get(`${userDetailsUrl}${userId}`, { headers });
 
@@ -42,9 +41,9 @@ const server = http.createServer((req, res) => {
             userDetailsList.push({
               'user_id': userId,
               'email': userEmail,
-              'activity': item.activity,
-              'created': item.created,
-              'course': item.additional_info.course
+              'activity': activity,
+              'created': created,
+              'course': course
             });
           } else {
             console.error(`Error fetching user details for ID ${userId}. Status code: ${userResponse.status}`);
@@ -56,7 +55,11 @@ const server = http.createServer((req, res) => {
 
       const promises = responseData.map(async (item) => {
         const userId = item.user.id;
-        await getUserDetails(userId);
+        const activity = item.activity;
+        const created = item.created;
+        const course = item.additional_info ? item.additional_info.course : null;
+
+        await getUserDetails(userId, activity, created, course);
       });
 
       Promise.all(promises)
