@@ -7,7 +7,7 @@ const eventLogsUrl = `${BASE_URL}event-logs`;
 const userDetailsUrl = `${BASE_URL}users/`;
 const headers = {
   'Accept': 'application/json',
-  'Authorization': 'Bearer fezWGXG2kVxMoyNeEM9JhAEum5JAFFFneExlMBzi',
+  'Authorization': 'Bearer NaGH96mLlGQyDCndDaaxotRdUUhC5OYM9Kcr7zyD',
   'Lw-Client': '5e318802ce0e77a1d77ab772'
 };
 
