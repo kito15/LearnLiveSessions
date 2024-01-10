@@ -11,6 +11,46 @@ const headers = {
   'Lw-Client': '5e318802ce0e77a1d77ab772'
 };
 
+const salesforceCredentials = {
+  client_id: '3MVG9p1Q1BCe9GmBa.vd3k6U6tisbR1DMPjMzaiBN7xn.uqsguNxOYdop1n5P_GB1yHs3gzBQwezqI6q37bh9',
+  client_secret: '1AAD66E5E5BF9A0F6FCAA681ED6720A797AC038BC6483379D55C192C1DC93190',
+  username: 'admin@unblindedmastery.com',
+  password: 'Unblinded2023$',
+  grant_type: 'password',
+};
+
+const salesforceBaseUrl = 'https://login.salesforce.com';
+const tokenEndpoint = `${salesforceBaseUrl}/services/oauth2/token`;
+
+const getAccessToken = async () => {
+  try {
+    const response = await axios.post(tokenEndpoint, null, {
+      params: {
+        grant_type: salesforceCredentials.grant_type,
+        client_id: salesforceCredentials.client_id,
+        client_secret: salesforceCredentials.client_secret,
+        username: salesforceCredentials.username,
+        password: salesforceCredentials.password,
+      },
+    });
+
+    if (response.status === 200) {
+      const accessToken = response.data.access_token;
+      console.log('Access Token:', accessToken);
+      return accessToken;
+    } else {
+      console.error(`Error obtaining access token. Status code: ${response.status}`);
+      return null;
+    }
+  } catch (error) {
+    console.error(`Error obtaining access token. ${error.message}`);
+    return null;
+  }
+};
+
+// Call the function to obtain the access token
+getAccessToken();
+
 const getUserDetails = async (userId) => {
   try {
     const userResponse = await axios.get(`${userDetailsUrl}${userId}`, { headers });
