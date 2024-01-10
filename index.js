@@ -25,7 +25,7 @@ const getSalesforceAccessToken = async () => {
     client_id: salesforceCredentials.client_id,
     client_secret: salesforceCredentials.client_secret,
     username: salesforceCredentials.username,
-    password: `${salesforceCredentials.password}${salesforceCredentials.security_token}`,
+    password: salesforceCredentials.password,
   });
 
   try {
