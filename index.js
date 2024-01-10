@@ -19,7 +19,7 @@ const salesforceCredentials = {
   grant_type: 'password',
 };
 
-const salesforceBaseUrl = 'https://login.salesforce.com';
+const salesforceBaseUrl = 'https://unblindedmastery.my.salesforce.com';
 const tokenEndpoint = `${salesforceBaseUrl}/services/oauth2/token`;
 
 const getAccessToken = async () => {
@@ -48,15 +48,37 @@ const getAccessToken = async () => {
   }
 };
 
-// Call the function to obtain the access token
-getAccessToken();
+const getSalesforceAccountId = async (email, accessToken) => {
+  try {
+    const salesforceApiEndpoint = `${salesforceBaseUrl}/services/data/v58.0/query/`;
+    const query = `SELECT Id FROM Account WHERE Email__c = '${email}'`;
 
-const getUserDetails = async (userId) => {
+    const response = await axios.get(salesforceApiEndpoint, {
+      params: { q: query },
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (response.status === 200 && response.data.records.length > 0) {
+      return response.data.records[0].Id;
+    } else {
+      console.error(`Error fetching Salesforce account ID for email ${email}. Status code: ${response.status}`);
+      return null;
+    }
+  } catch (error) {
+    console.error(`Error fetching Salesforce account ID for email ${email}. ${error.message}`);
+    return null;
+  }
+};
+
+const getUserDetails = async (userId, accessToken) => {
   try {
     const userResponse = await axios.get(`${userDetailsUrl}${userId}`, { headers });
 
     if (userResponse.status === 200) {
-      return { email: userResponse.data.email };
+      const { email } = userResponse.data;
+      const salesforceAccountId = await getSalesforceAccountId(email, accessToken);
+
+      return { email, salesforce_account_id: salesforceAccountId };
     } else {
       console.error(`Error fetching user details for ID ${userId}. Status code: ${userResponse.status}`);
       return null;
@@ -69,6 +91,8 @@ const getUserDetails = async (userId) => {
 
 const server = http.createServer(async (req, res) => {
   try {
+    const accessToken = await getAccessToken();
+
     const startDate = DateTime.fromObject({ year: 2024, month: 1, day: 3 });
     const endDate = DateTime.fromObject({ year: 2024, month: 1, day: 5 });
 
@@ -84,10 +108,10 @@ const server = http.createServer(async (req, res) => {
 
     const response = await axios.get(eventLogsUrl, { headers, params });
     const responseData = response.data.data || [];
-    
+
     const userDetailsPromises = responseData.map(async (item) => {
       const { user: { id: userId }, activity, created, additional_info: { course } = {} } = item;
-      const userDetails = await getUserDetails(userId);
+      const userDetails = await getUserDetails(userId, accessToken);
       if (userDetails) {
         return { user_id: userId, activity, created, course, ...userDetails };
       }
