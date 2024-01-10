@@ -7,7 +7,7 @@ const eventLogsUrl = `${BASE_URL}event-logs`;
 const userDetailsUrl = `${BASE_URL}users/`;
 const headers = {
   'Accept': 'application/json',
-  'Authorization': 'Bearer NaGH96mLlGQyDCndDaaxotRdUUhC5OYM9Kcr7zyD',
+  'Authorization': 'Bearer 2rEqc6KTe1IRoUG7BTG0Ybw8IC63pJW40thoPDSP',
   'Lw-Client': '5e318802ce0e77a1d77ab772'
 };
 
@@ -29,13 +29,12 @@ const getUserDetails = async (userId) => {
 
 const server = http.createServer(async (req, res) => {
   try {
-    const currentDateTime = DateTime.local();
-    const daysUntilWednesday = (currentDateTime.weekday - 2 + 7) % 7;
-    const adjustedDate = currentDateTime.minus({ days: daysUntilWednesday });
-    
-    const createdAfter = Math.floor(adjustedDate.toSeconds());
-    const createdBefore = Math.floor(adjustedDate.plus({ days: 7 }).toSeconds());
-    
+    const startDate = DateTime.fromObject({ year: 2024, month: 1, day: 3 });
+    const endDate = DateTime.fromObject({ year: 2024, month: 1, day: 5 });
+
+    const createdAfter = Math.floor(startDate.toSeconds());
+    const createdBefore = Math.floor(endDate.endOf('day').toSeconds());
+
     const params = {
       activity: 'live_session_attended',
       created_after: createdAfter,
