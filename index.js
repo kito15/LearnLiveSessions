@@ -40,10 +40,11 @@ const getSalesforceAccessToken = async () => {
 const findSalesforceAccountId = async (email, accessToken) => {
   try {
     const response = await axios.get(
-      `https://unblindedmastery.lightning.force.com/services/data/v59.0/query/?q=SELECT+Id+FROM+Account+WHERE+Email__c='${email}'`,
+      `https://unblindedmastery.lightning.force.com/services/data/v58.0/query/?q=SELECT+Id+FROM+Account+WHERE+Email__c='${email}'`,
       {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
         },
       }
     );
