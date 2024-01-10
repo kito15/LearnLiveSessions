@@ -54,21 +54,21 @@ const getUserDetails = async (userId, salesforceAccessToken) => {
 
 const getSalesforceAccountId = async (email, salesforceAccessToken) => {
   try {
-    const response = await axios.get('https://unblindedmastery.lightning.force.com/services/data/v58.0/query/', {
+    const queryUrl = `https://unblindedmastery.my.salesforce.com/services/data/v58.0/query/?q=SELECT+Id+FROM+Account+WHERE+Email__c='${email}'`;
+    const response = await axios.get(queryUrl, {
       headers: {
-        'Authorization': `Bearer ${salesforceAccessToken}`,
+        Authorization: `Bearer ${salesforceAccessToken}`,
         'Content-Type': 'application/json',
-      },
-      params: {
-        q: `SELECT Id FROM Account WHERE Email__c = '${email}'`,
       },
     });
 
-    const accountId = response.data.records[0].Id;
-    return accountId;
+    if (response.data.records.length > 0) {
+      return response.data.records[0].Id;
+    } else {
+      throw new Error('Account not found for the provided email');
+    }
   } catch (error) {
-    console.error(`Error fetching Salesforce account ID for email ${email}: ${error.message}`);
-    return null;
+    throw new Error(`Error retrieving AccountId: ${error.response ? error.response.data : error.message}`);
   }
 };
 
