@@ -11,6 +11,13 @@ const headers = {
   'Lw-Client': '5e318802ce0e77a1d77ab772',
 };
 
+const salesforceCredentials = {
+  client_id: '3MVG9p1Q1BCe9GmBa.vd3k6U6tisbR1DMPjMzaiBN7xn.uqsguNxOYdop1n5P_GB1yHs3gzBQwezqI6q37bh9',
+  client_secret: '1AAD66E5E5BF9A0F6FCAA681ED6720A797AC038BC6483379D55C192C1DC93190',
+  username: 'admin@unblindedmastery.com',
+  password: 'Unblinded2023$',
+};
+
 const getSalesforceAccessToken = async () => {
   const url = 'https://login.salesforce.com/services/oauth2/token';
   const params = new URLSearchParams({
