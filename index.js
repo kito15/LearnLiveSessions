@@ -5,65 +5,38 @@ const { DateTime } = require('luxon');
 const BASE_URL = 'https://academy.unblindedmastery.com/admin/api/v2/';
 const eventLogsUrl = `${BASE_URL}event-logs`;
 const userDetailsUrl = `${BASE_URL}users/`;
-const headers = {
-  'Accept': 'application/json',
-  'Authorization': 'Bearer 2rEqc6KTe1IRoUG7BTG0Ybw8IC63pJW40thoPDSP',
-  'Lw-Client': '5e318802ce0e77a1d77ab772',
-};
-
 const salesforceCredentials = {
   client_id: '3MVG9p1Q1BCe9GmBa.vd3k6U6tisbR1DMPjMzaiBN7xn.uqsguNxOYdop1n5P_GB1yHs3gzBQwezqI6q37bh9',
   client_secret: '1AAD66E5E5BF9A0F6FCAA681ED6720A797AC038BC6483379D55C192C1DC93190',
   username: 'admin@unblindedmastery.com',
   password: 'Unblinded2023$',
 };
+const headers = {
+  'Accept': 'application/json',
+  'Authorization': 'Bearer 2rEqc6KTe1IRoUG7BTG0Ybw8IC63pJW40thoPDSP',
+  'Lw-Client': '5e318802ce0e77a1d77ab772'
+};
 
 const getSalesforceAccessToken = async () => {
-  const url = 'https://login.salesforce.com/services/oauth2/token';
-  const params = new URLSearchParams({
-    grant_type: 'password',
-    client_id: salesforceCredentials.client_id,
-    client_secret: salesforceCredentials.client_secret,
-    username: salesforceCredentials.username,
-    password: salesforceCredentials.password,
-  });
-
   try {
-    // Get Salesforce access token
-    const response = await axios.post(url, params);
-    const accessToken = response.data.access_token;
+    const response = await axios.post('https://login.salesforce.com/services/oauth2/token', null, {
+      params: {
+        grant_type: 'password',
+        client_id: salesforceCredentials.client_id,
+        client_secret: salesforceCredentials.client_secret,
+        username: salesforceCredentials.username,
+        password: salesforceCredentials.password,
+      },
+    });
 
-    return accessToken;
+    return response.data.access_token;
   } catch (error) {
-    console.error('Error obtaining Salesforce access token:', error.message);
+    console.error(`Error obtaining Salesforce access token: ${error.message}`);
     return null;
   }
 };
 
-const findSalesforceAccountId = async (email, accessToken) => {
-  try {
-    const response = await axios.get(
-      `https://unblindedmastery.lightning.force.com/services/data/v59.0/query/?q=SELECT+Id+FROM+Account+WHERE+Email__c='${email}'`,
-      {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      }
-    );
-
-    if (response.status === 200 && response.data.records.length > 0) {
-      return response.data.records[0].Id;
-    } else {
-      console.error(`Error finding Salesforce account ID for email ${email}:`, response.data);
-      return null;
-    }
-  } catch (error) {
-    console.error(`Error finding Salesforce account ID for email ${email}:`, error.message);
-    return null;
-  }
-};
-
-const getUserDetails = async (userId) => {
+const getUserDetails = async (userId, salesforceAccessToken) => {
   try {
     const userResponse = await axios.get(`${userDetailsUrl}${userId}`, { headers });
 
@@ -79,8 +52,30 @@ const getUserDetails = async (userId) => {
   }
 };
 
+const getSalesforceAccountId = async (email, salesforceAccessToken) => {
+  try {
+    const response = await axios.get('https://unblindedmastery.lightning.force.com/services/data/v58.0/query/', {
+      headers: {
+        'Authorization': `Bearer ${salesforceAccessToken}`,
+        'Content-Type': 'application/json',
+      },
+      params: {
+        q: `SELECT Id FROM Account WHERE Email__c = '${email}'`,
+      },
+    });
+
+    const accountId = response.data.records[0].Id;
+    return accountId;
+  } catch (error) {
+    console.error(`Error fetching Salesforce account ID for email ${email}: ${error.message}`);
+    return null;
+  }
+};
+
 const server = http.createServer(async (req, res) => {
   try {
+    const salesforceAccessToken = await getSalesforceAccessToken();
+    
     const startDate = DateTime.fromObject({ year: 2024, month: 1, day: 3 });
     const endDate = DateTime.fromObject({ year: 2024, month: 1, day: 5 });
 
@@ -96,35 +91,26 @@ const server = http.createServer(async (req, res) => {
 
     const response = await axios.get(eventLogsUrl, { headers, params });
     const responseData = response.data.data || [];
+    
+    const userDetailsPromises = responseData.map(async (item) => {
+      const { user: { id: userId }, activity, created, additional_info: { course } = {} } = item;
+      const userDetails = await getUserDetails(userId, salesforceAccessToken);
+      if (userDetails) {
+        return { user_id: userId, activity, created, course, ...userDetails };
+      }
+      return null;
+    });
 
-    const accessToken = await getSalesforceAccessToken();
+    const userDetailsList = (await Promise.all(userDetailsPromises)).filter(Boolean);
 
-    if (accessToken) {
-      const userDetailsWithSalesforceIds = await Promise.all(
-        responseData.map(async (item) => {
-          const { user: { id: userId }, activity, created, additional_info: { course } = {} } = item;
-          const userDetails = await getUserDetails(userId);
-          
-          if (userDetails) {
-            const { email } = userDetails;
-            const accountId = await findSalesforceAccountId(email, accessToken);
+    const userDetailsWithSalesforceIds = await Promise.all(userDetailsList.map(async (userDetails) => {
+      const { email } = userDetails;
+      const accountId = await getSalesforceAccountId(email, salesforceAccessToken);
+      return { ...userDetails, salesforce_account_id: accountId };
+    }));
 
-            if (accountId) {
-              return { user_id: userId, activity, created, course, email, salesforce_account_id: accountId };
-            }
-          }
-
-          return null;
-        })
-      );
-
-      const filteredUserDetails = userDetailsWithSalesforceIds.filter(Boolean);
-
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(filteredUserDetails));
-    } else {
-      console.log('Failed to obtain Salesforce access token. Check the error messages above.');
-    }
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(userDetailsWithSalesforceIds));
   } catch (error) {
     console.error(`Error processing request: ${error.message}`);
     res.writeHead(500, { 'Content-Type': 'text/plain' });
