@@ -11,26 +11,22 @@ const headers = {
   'Lw-Client': '5e318802ce0e77a1d77ab772',
 };
 
-const salesforceCredentials = {
-  client_id: '3MVG9p1Q1BCe9GmBa.vd3k6U6tisbR1DMPjMzaiBN7xn.uqsguNxOYdop1n5P_GB1yHs3gzBQwezqI6q37bh9',
-  client_secret: '1AAD66E5E5BF9A0F6FCAA681ED6720A797AC038BC6483379D55C192C1DC93190',
-  username: 'admin@unblindedmastery.com',
-  password: 'Unblinded2023$',
-};
-
 const getSalesforceAccessToken = async () => {
-  try {
-    const response = await axios.post(
-      'https://login.salesforce.com/services/oauth2/token',
-      `grant_type=password&client_id=${salesforceCredentials.client_id}&client_secret=${salesforceCredentials.client_secret}&username=${salesforceCredentials.username}&password=${salesforceCredentials.password}`
-    );
+  const url = 'https://login.salesforce.com/services/oauth2/token';
+  const params = new URLSearchParams({
+    grant_type: 'password',
+    client_id: salesforceCredentials.client_id,
+    client_secret: salesforceCredentials.client_secret,
+    username: salesforceCredentials.username,
+    password: `${salesforceCredentials.password}${salesforceCredentials.security_token}`,
+  });
 
-    if (response.status === 200 && response.data.access_token) {
-      return response.data.access_token;
-    } else {
-      console.error('Error obtaining Salesforce access token:', response.data);
-      return null;
-    }
+  try {
+    // Get Salesforce access token
+    const response = await axios.post(url, params);
+    const accessToken = response.data.access_token;
+
+    return accessToken;
   } catch (error) {
     console.error('Error obtaining Salesforce access token:', error.message);
     return null;
@@ -40,11 +36,10 @@ const getSalesforceAccessToken = async () => {
 const findSalesforceAccountId = async (email, accessToken) => {
   try {
     const response = await axios.get(
-      `https://unblindedmastery.lightning.force.com/services/data/v58.0/query/?q=SELECT+Id+FROM+Account+WHERE+Email__c='${email}'`,
+      `https://unblindedmastery.lightning.force.com/services/data/v59.0/query/?q=SELECT+Id+FROM+Account+WHERE+Email__c='${email}'`,
       {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
         },
       }
     );
